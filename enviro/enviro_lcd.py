@@ -3,7 +3,11 @@
 import colorsys
 import sys
 import time
+<<<<<<< HEAD
 import cv2
+=======
+
+>>>>>>> 6a17c87 (structure)
 import st7735
 
 try:
@@ -21,9 +25,12 @@ from pms5003 import PMS5003
 from pms5003 import ReadTimeoutError as pmsReadTimeoutError
 from enviroplus import gas
 import subprocess
+<<<<<<< HEAD
 import depthai as dai
 from PIL import Image , ImageDraw , ImageFont
 from fonts.ttf import RobotoMedium as UserFont
+=======
+>>>>>>> 6a17c87 (structure)
 
 logging.basicConfig(
     format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
@@ -72,11 +79,14 @@ top_pos = 25
 
 # Displays data and text on the 0.96" LCD
 def display_text(variable, data, unit):
+<<<<<<< HEAD
     # Set up canvas and font
     img = Image.new("RGB", (WIDTH, HEIGHT), color=(0, 0, 0))
     draw = ImageDraw.Draw(img)
     font_size = 20
     font = ImageFont.truetype(UserFont, font_size)
+=======
+>>>>>>> 6a17c87 (structure)
     # Maintain length of list
     values[variable] = values[variable][1:] + [data]
     # Scale the values for the variable between 0 and 1
@@ -121,8 +131,13 @@ last_page = 0
 light = 1
 
 # Create a values dict to store the data
+<<<<<<< HEAD
 # Create a values dict to store the data
 variables = ["temperature"]
+=======
+variables = ["temperature",
+            ]
+>>>>>>> 6a17c87 (structure)
 
 values = {}
 
@@ -150,7 +165,11 @@ try:
             avg_cpu_temp = sum(cpu_temps) / float(len(cpu_temps))
             raw_temp = bme280.get_temperature()
             data = raw_temp - ((avg_cpu_temp - raw_temp) / factor)
+<<<<<<< HEAD
             display_text("temperature", data, unit)
+=======
+            display_text(variables[mode], data, unit)
+>>>>>>> 6a17c87 (structure)
 
         if mode == 1:
             #IP address
@@ -178,6 +197,7 @@ try:
             st7735.display(img)
 
         if mode == 2:
+<<<<<<< HEAD
             pipeline = dai.Pipeline()
             # Define source and output
             camRgb = pipeline.create(dai.node.ColorCamera)
@@ -211,6 +231,12 @@ try:
                     st7735.display(im_pil)
                     if cv2.waitKey(1) == ord('q') :
                         break
+=======
+            # Detection
+            unit = "%"
+            data = bme280.get_humidity()
+            display_text(variables[mode], data, unit)
+>>>>>>> 6a17c87 (structure)
 
 # Exit cleanly
 except KeyboardInterrupt:
