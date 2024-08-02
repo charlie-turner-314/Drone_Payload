@@ -132,12 +132,26 @@ light = 1
 
 # Create a values dict to store the data
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Create a values dict to store the data
 variables = ["temperature"]
 =======
 variables = ["temperature",
             ]
 >>>>>>> 6a17c87 (structure)
+=======
+# Create a values dict to store the data
+variables = ["temperature",
+             "pressure",
+             "humidity",
+             "light",
+             "oxidised",
+             "reduced",
+             "nh3",
+             "pm1",
+             "pm25",
+             "pm10"]
+>>>>>>> 1531158 (what)
 
 values = {}
 
@@ -198,6 +212,9 @@ try:
 
         if mode == 2:
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 1531158 (what)
             pipeline = dai.Pipeline()
             # Define source and output
             camRgb = pipeline.create(dai.node.ColorCamera)
@@ -212,6 +229,7 @@ try:
             # Connect to device and start pipeline
             with dai.Device(pipeline) as device :
                 qRgb = device.getOutputQueue (name="rgb", maxSize =4 , blocking = False)
+<<<<<<< HEAD
                 while True:
                     proximity = ltr559.get_proximity()
                     # If the proximity crosses the threshold, toggle the mode
@@ -221,6 +239,9 @@ try:
                         mode %= 3
                         last_page = time.time()
                         break
+=======
+                while True :
+>>>>>>> 1531158 (what)
                     inRgb = qRgb.get()
                     img = inRgb.getCvFrame()
                     img = cv2.cvtColor(img , cv2.COLOR_BGR2RGB)
@@ -231,12 +252,15 @@ try:
                     st7735.display(im_pil)
                     if cv2.waitKey(1) == ord('q') :
                         break
+<<<<<<< HEAD
 =======
             # Detection
             unit = "%"
             data = bme280.get_humidity()
             display_text(variables[mode], data, unit)
 >>>>>>> 6a17c87 (structure)
+=======
+>>>>>>> 1531158 (what)
 
 # Exit cleanly
 except KeyboardInterrupt:
