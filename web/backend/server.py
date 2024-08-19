@@ -3,8 +3,10 @@ import time
 import os
 from dotenv import dotenv_values
 
+from enviro.enviro_logging import get_data
+
 # Constants
-LOOP_DELAY = 0.2  # seconds
+LOOP_DELAY = 1  # seconds
 
 # Global variables
 config = None
@@ -14,10 +16,10 @@ cur = None
 
 def process():
     # Get data
-    data = 0  # Placeholder for data
+    enviro = get_data()
 
     # Insert sensor data into database
-    cur.execute("INSERT INTO samples (data) VALUES (%s)", (data,))
+    cur.execute("INSERT INTO samples (temperature, pressure, humidity, light, oxidised, reduced, nh3) VALUES (%s, %s, %s, %s, %s, %s, %s)", enviro)
     conn.commit()
 
 
@@ -47,7 +49,3 @@ def main():
         time.sleep(max(0, next_time - time.time()))
         process()
         next_time += (time.time() - next_time) // LOOP_DELAY * LOOP_DELAY + LOOP_DELAY
-
-
-if __name__ == "__main__":
-    main()
