@@ -8,8 +8,7 @@ import json
 
 class CameraDetection:
     def __init__(self):
-        # self.nn_path = "/home/team6/Drone/target_acquisition/model/yolo.blob"
-        self.nn_path = "/home/team6/depthai-python/examples/models/mobilenet-ssd_openvino_2021.4_6shave.blob"
+        self.nn_path = "/home/team6/Drone/target_acquisition/model/best_openvino_2022.1_6shave.blob"
         self.pipeline = self.setup_camera()
         self.get_camera_intrinsics()
         self.device = dai.Device(self.pipeline, usb2Mode=True)
