@@ -126,8 +126,38 @@ def get_cpu_temperature():
     output, _error = process.communicate()
     return float(output[output.index("=") + 1:output.rindex("'")])
 
+def get_data():
+    # Tuning factor for compensation. Decrease this number to adjust the
+    # temperature down, and increase to adjust up
+    factor = 2.25
+
+    cpu_temps = [get_cpu_temperature()] * 5
+
+    # Everything on one screen
+    cpu_temp = get_cpu_temperature()
+    # Smooth out with some averaging to decrease jitter
+    cpu_temps = cpu_temps[1:] + [cpu_temp]
+    avg_cpu_temp = sum(cpu_temps) / float(len(cpu_temps))
+    raw_temp = bme280.get_temperature()
+    temp = raw_temp - ((avg_cpu_temp - raw_temp) / factor)
+    #save_data(0, raw_data)
+    pressure = bme280.get_pressure()
+    #save_data(1, raw_data)
+    humidity = bme280.get_humidity()
+    #save_data(2, raw_data)
+    light = ltr559.get_lux()
+    #save_data(3, raw_data)
+    gas_data = gas.read_all()
+    gas_oxidising = gas_data.oxidising / 1000
+    gas_reducing = gas_data.reducing / 1000
+    gas_nh3 = gas_data.nh3 / 1000
+    #save_data(4, gas_data.oxidising / 1000)
+    #save_data(5, gas_data.reducing / 1000)
+    #save_data(6, gas_data.nh3 / 1000)
+    return [temp, pressure, humidity, light, gas_oxidising, gas_reducing, gas_nh3]
 
 def main():
+    get_data()
     # Tuning factor for compensation. Decrease this number to adjust the
     # temperature down, and increase to adjust up
     factor = 2.25
@@ -138,6 +168,7 @@ def main():
     mode = 10    # The starting mode
     last_page = 0
 
+    '''
     # Everything on one screen
     cpu_temp = get_cpu_temperature()
     # Smooth out with some averaging to decrease jitter
@@ -156,7 +187,7 @@ def main():
     save_data(4, gas_data.oxidising / 1000)
     save_data(5, gas_data.reducing / 1000)
     save_data(6, gas_data.nh3 / 1000)
-
+'''
 
 if __name__ == "__main__":
     main()
