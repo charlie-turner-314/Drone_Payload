@@ -22,13 +22,9 @@ from pms5003 import PMS5003
 from pms5003 import ReadTimeoutError as pmsReadTimeoutError
 from enviroplus import gas
 import subprocess
-import depthai as dai
-from PIL import Image , ImageDraw , ImageFont
 from fonts.ttf import RobotoMedium as UserFont
+from target_acquisition.camera_detection import CameraDetection
 
-N_CLASSES = 4
-YOLO_OUTPUT_SHAPE = (-1, 4 + N_CLASSES)
-CONFIDENCE_THRESHOLD = 0.5
 
 logging.basicConfig(
     format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
@@ -62,6 +58,9 @@ st7735.begin()
 
 WIDTH = st7735.width
 HEIGHT = st7735.height
+print(WIDTH, HEIGHT)
+# The position of the top bar
+TOP_POS = 25
 
 # Set up canvas and font
 img = Image.new("RGB", (WIDTH, HEIGHT), color=(0, 0, 0))
@@ -69,14 +68,12 @@ draw = ImageDraw.Draw(img)
 font_size = 20
 font = ImageFont.truetype(UserFont, font_size)
 
-message = ""
 
-# The position of the top bar
-top_pos = 25
+camera = CameraDetection()
 
 
 # Displays data and text on the 0.96" LCD
-def display_text(variable, data, unit):
+def display_text(values, variable, data, unit):
     # Set up canvas and font
     img = Image.new("RGB", (WIDTH, HEIGHT), color=(0, 0, 0))
     draw = ImageDraw.Draw(img)
@@ -97,9 +94,9 @@ def display_text(variable, data, unit):
         colour = (1.0 - colours[i]) * 0.6
         r, g, b = [int(x * 255.0) for x in colorsys.hsv_to_rgb(colour, 1.0, 1.0)]
         # Draw a 1-pixel wide rectangle of colour
-        draw.rectangle((i, top_pos, i + 1, HEIGHT), (r, g, b))
+        draw.rectangle((i, TOP_POS, i + 1, HEIGHT), (r, g, b))
         # Draw a line graph in black
-        line_y = HEIGHT - (top_pos + (colours[i] * (HEIGHT - top_pos))) + top_pos
+        line_y = HEIGHT - (TOP_POS + (colours[i] * (HEIGHT - TOP_POS))) + TOP_POS
         draw.rectangle((i, line_y, i + 1, line_y + 1), (0, 0, 0))
     # Write the text at the top in black
     draw.text((0, 0), message, font=font, fill=(0, 0, 0))
@@ -114,58 +111,34 @@ def get_cpu_temperature():
     return temp
 
 
-# Tuning factor for compensation. Decrease this number to adjust the
-# temperature down, and increase to adjust up
-factor = 2.25
+def main():
+    # Tuning factor for compensation. Decrease this number to adjust the
+    # temperature down, and increase to adjust up
+    factor = 2.25
 
-cpu_temps = [get_cpu_temperature()] * 5
+    cpu_temps = [get_cpu_temperature()] * 5
 
-delay = 0.5  # Debounce the proximity tap
-mode = 2     # The starting mode
-last_page = 0
-light = 1
+    delay = 0.5  # Debounce the proximity tap
+    mode = 2     # The starting mode
+    last_page = 0
+    light = 1
 
-# Create a values dict to store the data
-variables = ["temperature"]
+    # Create a values dict to store the data
+    variables = ["temperature"]
 
-values = {}
+    values = {}
 
-for v in variables:
-    values[v] = [1] * WIDTH
+    for v in variables:
+        values[v] = [1] * WIDTH
 
-# setup camera
-# Setup the OAK-D pipeline (as you did before)
-pipeline = dai.Pipeline()
 
-# Define sources and outputs
-cam_rgb = pipeline.create(dai.node.ColorCamera)
-detection_nn = pipeline.create(dai.node.NeuralNetwork)
-xout_nn = pipeline.create(dai.node.XLinkOut)
-xout_rgb = pipeline.create(dai.node.XLinkOut)
-
-xout_nn.setStreamName("nn")
-xout_rgb.setStreamName("rgb")
-
-# Properties
-cam_rgb.setPreviewSize(640,640)
-cam_rgb.setInterleaved(False)
-cam_rgb.setFps(5)
-
-# Load the model blob
-detection_nn.setBlobPath('../target_acquisition/model/weights.blob')
-
-# Linking
-cam_rgb.preview.link(detection_nn.input)
-cam_rgb.preview.link(xout_rgb.input)
-detection_nn.out.link(xout_nn.input)
-
-# The main loop
-try:
+    # The main loop
     while True:
         proximity = ltr559.get_proximity()
 
         # If the proximity crosses the threshold, toggle the mode
         if proximity > 1500 and time.time() - last_page > delay:
+            print("Changing Mode")
             mode += 1
             mode %= 3
             last_page = time.time()
@@ -180,7 +153,7 @@ try:
             avg_cpu_temp = sum(cpu_temps) / float(len(cpu_temps))
             raw_temp = bme280.get_temperature()
             data = raw_temp - ((avg_cpu_temp - raw_temp) / factor)
-            display_text("temperature", data, unit)
+            display_text(values, "temperature", data, unit)
 
         if mode == 1:
             #IP address
@@ -194,7 +167,6 @@ try:
             text_colour = (255, 255, 255)
             back_colour = (0, 170, 170)
             res = subprocess.check_output(["hostname", "-I"]).decode("utf-8").strip()
-            print(res)
             message = f"{res}"
             x1, y1, x2, y2 = font.getbbox(message)
             size_x = x2 - x1
@@ -208,70 +180,12 @@ try:
             st7735.display(img)
 
         if mode == 2:
-            # Connect to device and start pipeline
-            # Connect to the device and start the pipeline
-            with dai.Device(pipeline) as device:
-                qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-                qNN = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
-
-                last_page = time.time()
-                delay = 1.0  # delay between mode changes
-                mode = 0  # starting mode
-
-                while True:
-                    proximity = ltr559.get_proximity()
-                    # If the proximity crosses the threshold, toggle the mode
-                    if proximity > 1500 and time.time() - last_page > delay:
-                        print("Changing mode")
-                        mode += 1
-                        mode %= 3
-                        last_page = time.time()
-
-                    # Get the latest RGB frame
-                    inRgb = qRgb.get()
-                    img = inRgb.getCvFrame()
-
-                    # Get the neural network output (detection results)
-                    inNN = qNN.get()
-                    detections = np.array(inNN.getFirstLayerFp16()).reshape(YOLO_OUTPUT_SHAPE)
-
-                    # Draw the detections on the image
-                    for detection in detections:
-                        x_center, y_center, width, height = detection[:4]
-                        objectness = detection[4]
-                        class_scores = detection[5:]
-
-                        if objectness > CONFIDENCE_THRESHOLD:
-                            class_id = np.argmax(class_scores)
-                            confidence = class_scores[class_id]
-
-                            if confidence > CONFIDENCE_THRESHOLD:
-                                # Convert to corner coordinates
-                                x_min = int((x_center - width / 2) * img.shape[1])
-                                y_min = int((y_center - height / 2) * img.shape[0])
-                                x_max = int((x_center + width / 2) * img.shape[1])
-                                y_max = int((y_center + height / 2) * img.shape[0])
-
-                                # Draw bounding box
-                                cv2.rectangle(img, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)
-
-                                # Add class label and confidence score
-                                label = f"ID: {class_id}, {int(confidence * 100)}%"
-                                cv2.putText(img, label, (x_min, y_min - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
-
-                    # Convert to RGB for PIL (if necessary)
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    im_pil = Image.fromarray(img)
-
-                    # Resize the image
-                    im_pil = im_pil.resize((WIDTH, HEIGHT))
-
-                    # Display the image on the LCD
-                    st7735.display(im_pil)
-
-                    if cv2.waitKey(1) == ord('q'):
-                        break
-
-# Exit cleanly
-except KeyboardInterrupt:
-    sys.exit(0)
+            try:
+                image, details = camera.get_frame(rgb_only=True)
+                # Resize the image to fit the LCD screen
+                # image.thumbnail((HEIGHT, WIDTH))
+                st7735.display(image)
+            except Exception as e:
+                if e == KeyboardInterrupt:
+                    sys.exit()
+                logging.error(f"Failed to get image: {e}")
