@@ -4,6 +4,7 @@ import os
 from dotenv import dotenv_values
 from threading import Thread
 from flask import Flask, jsonify, request
+from flask_cors import CORS, cross_origin
 from enviro.enviro_logging import get_data
 
 # Constants
@@ -14,7 +15,10 @@ config = None
 conn = None
 cur = None
 running = True
+
 app = Flask(__name__)
+cors = CORS(app)
+app.config["CORS_HEADERS"] = "Content-Type"
 
 
 @app.errorhandler(404)
@@ -97,7 +101,7 @@ def main():
     thread.start()
 
     # Start web server
-    app.run(host=config["HOST"], debug=True)
+    app.run(host=config["FLASK_HOST"], port=config["FLASK_PORT"], debug=True)
 
     # Cleanup
     running = False
