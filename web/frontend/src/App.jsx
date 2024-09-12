@@ -1,14 +1,22 @@
-import { useState } from 'react'
-import './App.css'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
-function App() {
-	const [count, setCount] = useState(0)
+import Header from './Header'
+import Logs from './Logs'
 
-	return (
-		<main>
-			<h1>Hello World</h1>
-		</main>
-	)
-}
+import 'bootstrap/dist/css/bootstrap.min.css';
 
-export default App
+createRoot(document.getElementById('root')).render(
+	<StrictMode>
+		<BrowserRouter>
+			<Header />
+			<main>
+				<Routes>
+					<Route path='/logs' element={<Logs />} />
+					<Route path='/' element={<p>TODO</p>} />
+				</Routes>
+			</main>
+		</BrowserRouter>
+	</StrictMode>
+)
