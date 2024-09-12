@@ -3,8 +3,7 @@ import time
 import os
 from dotenv import dotenv_values
 from threading import Thread
-from flask import Flask
-
+from flask import Flask, jsonify, request
 from enviro.enviro_logging import get_data
 
 # Constants
@@ -18,9 +17,35 @@ running = True
 app = Flask(__name__)
 
 
-@app.route("/")
-def index():
-    return "Hello, World!"
+@app.errorhandler(404)
+def page_not_found(e):
+    return jsonify(
+        error=True,
+        data="Page not found",
+    )
+
+
+@app.route("/test")
+def ret_test():
+    return jsonify(
+        error=False,
+        data="Success",
+    )
+
+
+@app.route("/data")
+def ret_data():
+    global cur
+
+    start = request.args.get("start", 0)
+
+    cur.execute("SELECT * FROM samples WHERE id > %s ORDER BY id DESC", (start,))
+    data = cur.fetchall()
+
+    return jsonify(
+        error=False,
+        data=data,
+    )
 
 
 def read_all():
