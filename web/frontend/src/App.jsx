@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 import Header from './Header'
 import Logs from './Logs'
+import Live from './Live'
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -14,7 +15,7 @@ createRoot(document.getElementById('root')).render(
 			<main>
 				<Routes>
 					<Route path='/logs' element={<Logs />} />
-					<Route path='/' element={<p>TODO</p>} />
+					<Route path='/' element={<Live />} />
 				</Routes>
 			</main>
 		</BrowserRouter>
