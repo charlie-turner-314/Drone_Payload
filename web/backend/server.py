@@ -40,6 +40,21 @@ def get_test():
     )
 
 
+@app.route("/data/all")
+def get_all():
+    global cur
+
+    limit = request.args.get("limit", 50)
+
+    cur.execute("SELECT * FROM data ORDER BY id DESC LIMIT %s", (limit,))
+    data = cur.fetchall()
+
+    return jsonify(
+        error=False,
+        data=data,
+    )
+
+
 @app.route("/data/enviro")
 def get_enviro():
     global cur
@@ -98,12 +113,8 @@ def read_all():
 
         # Insert data into database
         cur.execute(
-            "INSERT INTO enviro (temperature, pressure, humidity, light, oxidised, reduced, nh3) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            enviro,
-        )
-        cur.execute(
-            "INSERT INTO imagery (valve_state, aruco_id, aruco_pose_x, aruco_pose_y, pressure) VALUES (%s, %s, %s, %s, %s)",
-            imagery,
+            "INSERT INTO data (temperature, pressure, humidity, light, oxidised, reduced, nh3, valve_state, aruco_id, aruco_pose_x, aruco_pose_y, guage) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (*enviro, *imagery),
         )
         conn.commit()
 

@@ -7,7 +7,7 @@ export default function Logs() {
 
     async function getData() {
         const url = getServerURL()
-        url.pathname = '/data/enviro'
+        url.pathname = '/data/all'
 
         const response = await fetch(url)
         const json = await response.json()
@@ -39,6 +39,11 @@ export default function Logs() {
                                 <th>Oxidised</th>
                                 <th>Reduced</th>
                                 <th>Ammonia</th>
+                                <th>Valve State</th>
+                                <th>ArUCO ID</th>
+                                <th>ArUCO Position</th>
+                                <th>Pressure Guage</th>
+                                <th>Timestamp</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -52,6 +57,11 @@ export default function Logs() {
                                     <td>{d[5]}</td>
                                     <td>{d[6]}</td>
                                     <td>{d[7]}</td>
+                                    <td>{d[8] === null ? "" : d[8] ? "Open" : "Closed"}</td>
+                                    <td>{d[9]}</td>
+                                    <td>{d[9] === null ? "" : `(${d[10]}, ${d[11]})`}</td>
+                                    <td>{d[12]}</td>
+                                    <td>{d[13]}</td>
                                 </tr>
                             )) : null}
                         </tbody>
