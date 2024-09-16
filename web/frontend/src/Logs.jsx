@@ -1,16 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Card, CardBody, CardHeader, Table } from 'reactstrap';
+import { getHost } from './util';
 
 export default function Logs() {
     const [data, setData] = useState(undefined)
 
     async function getData() {
+        const url = getHost()
+        url.pathname = '/data'
+
         const response = await fetch('http://localhost:5000/data')
         const json = await response.json()
         if (json.error) {
             console.log(json.data)
             return
         }
+
         setData(json.data)
     }
 

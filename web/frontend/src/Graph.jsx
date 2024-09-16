@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader } from "reactstrap";
 import { Line } from "react-chartjs-2";
+import { getHost } from "./util";
 
 import "chart.js/auto";
 
 export default function Graph() {
     const [data, setData] = useState(undefined)
-
-    const INTERVAL = 1000
-    const MAX_ENTRIES = 30
+    const [rate, setRate] = useState(1000)
+    const [entries, setEntries] = useState(30)
 
     const options = {
         scales: {
@@ -22,7 +22,8 @@ export default function Graph() {
     let results = []
 
     async function getData() {
-        const url = new URL('http://localhost:5000/data')
+        const url = getHost()
+        url.pathname = '/data/enviro'
         url.searchParams.append('start', start)
 
         const response = await fetch(url)
@@ -33,7 +34,7 @@ export default function Graph() {
         }
 
         results = results.concat(json.data)
-        results = results.slice(-MAX_ENTRIES)
+        results = results.slice(-entries)
 
         const id = results.map(d => d[0])
         const temperature = results.map(d => d[1])
@@ -98,7 +99,7 @@ export default function Graph() {
     useEffect(() => {
         const interval = setInterval(() => {
             getData()
-        }, INTERVAL)
+        }, rate)
         return () => clearInterval(interval)
     }, [])
 
