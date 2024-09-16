@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader } from "reactstrap";
 import { Line } from "react-chartjs-2";
-import { getHost } from "./util";
+import { getServerURL } from "./common";
 
 import "chart.js/auto";
 
@@ -22,7 +22,7 @@ export default function Graph() {
     let results = []
 
     async function getData() {
-        const url = getHost()
+        const url = getServerURL()
         url.pathname = '/data/enviro'
         url.searchParams.append('start', start)
 

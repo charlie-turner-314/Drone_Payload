@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader } from "reactstrap";
-import { getHost } from "./util";
+import { getServerURL } from "./common";
 
 export default function Imagery() {
     const [data, setData] = useState({
@@ -13,7 +13,7 @@ export default function Imagery() {
     const [rate, setRate] = useState(1000)
 
     async function getData() {
-        const url = getHost()
+        const url = getServerURL()
         url.pathname = '/data/imagery'
 
         const response = await fetch(url)
