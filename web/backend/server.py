@@ -1,11 +1,14 @@
+import os
 import psycopg2
 import time
-import os
+
 from dotenv import dotenv_values
-from threading import Thread
 from flask import Flask, jsonify, request
-from flask_cors import CORS, cross_origin
-from enviro.enviro_logging import get_data
+from flask_cors import CORS
+from threading import Thread
+
+from .dummy import get_enviro_data
+# from enviro.enviro_logging import get_data as get_enviro_data
 
 # Constants
 LOOP_DELAY = 1  # seconds
@@ -67,7 +70,7 @@ def read_all():
         time.sleep(max(0, next_time - time.time()))
 
         # Get data
-        enviro = get_data()
+        enviro = get_enviro_data()
 
         # Insert sensor data into database
         cur.execute(
