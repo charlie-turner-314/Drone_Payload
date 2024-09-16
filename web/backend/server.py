@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from threading import Thread
 
-from .dummy import get_enviro_data
+from .dummy import get_enviro_data, get_imagery_data
 # from enviro.enviro_logging import get_data as get_enviro_data
 
 # Constants
@@ -46,7 +46,7 @@ def get_enviro():
 
     start = request.args.get("start", 0)
 
-    cur.execute("SELECT * FROM samples WHERE id > %s ORDER BY id ASC", (start,))
+    cur.execute("SELECT * FROM enviro WHERE id > %s ORDER BY id ASC", (start,))
     data = cur.fetchall()
 
     return jsonify(
@@ -57,7 +57,15 @@ def get_enviro():
 
 @app.route("/data/imagery")
 def get_imagery():
-    pass
+    global cur
+
+    cur.execute("SELECT * FROM imagery ORDER BY id DESC LIMIT 1")
+    data = cur.fetchone()
+
+    return jsonify(
+        error=False,
+        data=data,
+    )
 
 
 def read_all():
@@ -71,11 +79,16 @@ def read_all():
 
         # Get data
         enviro = get_enviro_data()
+        imagery = get_imagery_data()
 
-        # Insert sensor data into database
+        # Insert data into database
         cur.execute(
-            "INSERT INTO samples (temperature, pressure, humidity, light, oxidised, reduced, nh3) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            "INSERT INTO enviro (temperature, pressure, humidity, light, oxidised, reduced, nh3) VALUES (%s, %s, %s, %s, %s, %s, %s)",
             enviro,
+        )
+        cur.execute(
+            "INSERT INTO imagery (valve_state, aruco_id, aruco_pose_x, aruco_pose_y, pressure) VALUES (%s, %s, %s, %s, %s)",
+            imagery,
         )
         conn.commit()
 
