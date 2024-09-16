@@ -30,26 +30,31 @@ def page_not_found(e):
 
 
 @app.route("/test")
-def ret_test():
+def get_test():
     return jsonify(
         error=False,
         data="Success",
     )
 
 
-@app.route("/data")
-def ret_data():
+@app.route("/data/enviro")
+def get_enviro():
     global cur
 
     start = request.args.get("start", 0)
 
-    cur.execute("SELECT * FROM samples WHERE id > %s ORDER BY id DESC", (start,))
+    cur.execute("SELECT * FROM samples WHERE id > %s ORDER BY id ASC", (start,))
     data = cur.fetchall()
 
     return jsonify(
         error=False,
         data=data,
     )
+
+
+@app.route("/data/imagery")
+def get_imagery():
+    pass
 
 
 def read_all():
