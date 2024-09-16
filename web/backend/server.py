@@ -3,11 +3,11 @@ import psycopg2
 import time
 
 from dotenv import dotenv_values
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from threading import Thread
 
-from .dummy import get_enviro_data, get_imagery_data
+from .dummy import get_enviro_data, get_imagery_data, Video
 # from enviro.enviro_logging import get_data as get_enviro_data
 
 # Constants
@@ -65,6 +65,21 @@ def get_imagery():
     return jsonify(
         error=False,
         data=data,
+    )
+
+
+def video_gen(video):
+    while True:
+        frame = video.get_frame()
+        if frame is None:
+            break
+        yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
+
+
+@app.route("/video")
+def get_video():
+    return Response(
+        video_gen(Video()), mimetype="multipart/x-mixed-replace; boundary=frame"
     )
 
 

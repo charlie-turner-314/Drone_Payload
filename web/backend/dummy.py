@@ -1,3 +1,4 @@
+import cv2
 import random
 
 
@@ -29,3 +30,17 @@ def get_imagery_data():
         return [None, None, None, None, random.uniform(0, 100)]
     else:
         return [None, None, None, None, None]
+
+
+class Video:
+    def __init__(self):
+        self.cam = cv2.VideoCapture(0)
+
+    def get_frame(self):
+        if not self.cam.isOpened():
+            return None
+        _, frame = self.cam.read()
+        return cv2.imencode(".jpg", frame)[1].tobytes()
+
+    def __del__(self):
+        self.cam.release()
