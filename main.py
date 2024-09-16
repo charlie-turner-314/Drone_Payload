@@ -1,4 +1,5 @@
-from web.backend.server import main
+from enviro.enviro_lcd import main
+# from web.backend.server import main
 
 if __name__ == "__main__":
     main()
