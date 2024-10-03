@@ -11,7 +11,7 @@ export default function Live() {
             <CardGroup className="mx-3">
                 <Feed />
                 <Imagery />
-                <Controls />
+                {/* <Controls /> */}
             </CardGroup>
             <Graph />
         </div>

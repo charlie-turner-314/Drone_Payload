@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react'
-import { Card, CardBody, CardHeader, Table } from 'reactstrap';
+import { Button, Card, CardBody, CardHeader, Input, InputGroup, InputGroupText, Table } from 'reactstrap';
 import { getServerURL } from './common';
+import dateFormat from 'dateformat'
 
 export default function Logs() {
     const [data, setData] = useState(undefined)
+    const [limit, setLimit] = useState(30)
+    const [start, setStart] = useState(dateFormat(Date.now(), 'HH:MM'))
+    const [end, setEnd] = useState(dateFormat(Date.now(), 'HH:MM'))
 
     async function getData() {
         const url = getServerURL()
         url.pathname = '/data/all'
+
+        url.searchParams.append('limit', limit)
+        url.searchParams.append('start', start)
+        url.searchParams.append('end', end)
 
         const response = await fetch(url)
         const json = await response.json()
@@ -28,7 +36,16 @@ export default function Logs() {
             <Card className="m-3">
                 <CardHeader>Raw Logs</CardHeader>
                 <CardBody>
-                    <Table responsive>
+                    <InputGroup>
+                        <InputGroupText>Start</InputGroupText>
+                        <Input type='time' onInput={(val) => setStart(val.target.value)} value={start} />
+                        <InputGroupText>Limit</InputGroupText>
+                        <Input type='number' onInput={(val) => setLimit(val.target.value)} value={limit} />
+                        <InputGroupText>End</InputGroupText>
+                        <Input type='time' onInput={(val) => setEnd(val.target.value)} value={end} />
+                        <Button onClick={getData} color="primary">Refresh</Button>
+                    </InputGroup>
+                    <Table responsive className="mt-3">
                         <thead>
                             <tr>
                                 <th>ID</th>
