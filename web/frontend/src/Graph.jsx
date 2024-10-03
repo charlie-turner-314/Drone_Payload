@@ -11,8 +11,16 @@ export default function Graph() {
     const [entries, setEntries] = useState(30)
 
     const options = {
+        maintainAspectRatio: false,
         scales: {
-            y: {
+            A: {
+                type: 'linear',
+                position: 'right',
+                beginAtZero: true
+            },
+            B: {
+                type: 'linear',
+                position: 'left',
                 beginAtZero: true
             }
         }
@@ -51,46 +59,53 @@ export default function Graph() {
             labels: id,
             datasets: [
                 {
-                    label: "Temperature",
-                    data: temperature,
-                    borderColor: "rgba(255, 99, 132, 1)",
-                    backgroundColor: "rgba(255, 99, 132, 0.2)"
-                },
-                {
                     label: "Pressure",
                     data: pressure,
                     borderColor: "rgba(54, 162, 235, 1)",
-                    backgroundColor: "rgba(54, 162, 235, 0.2)"
+                    backgroundColor: "rgba(54, 162, 235, 0.2)",
+                    yAxisID: 'A'
+                },
+                {
+                    label: "Temperature",
+                    data: temperature,
+                    borderColor: "rgba(255, 99, 132, 1)",
+                    backgroundColor: "rgba(255, 99, 132, 0.2)",
+                    yAxisID: 'B'
                 },
                 {
                     label: "Humidity",
                     data: humidity,
                     borderColor: "rgba(255, 206, 86, 1)",
-                    backgroundColor: "rgba(255, 206, 86, 0.2)"
+                    backgroundColor: "rgba(255, 206, 86, 0.2)",
+                    yAxisID: 'B'
                 },
                 {
                     label: "Light",
                     data: light,
                     borderColor: "rgba(75, 192, 192, 1)",
-                    backgroundColor: "rgba(75, 192, 192, 0.2)"
+                    backgroundColor: "rgba(75, 192, 192, 0.2)",
+                    yAxisID: 'B'
                 },
                 {
                     label: "Oxidised",
                     data: oxidised,
                     borderColor: "rgba(153, 102, 255, 1)",
-                    backgroundColor: "rgba(153, 102, 255, 0.2)"
+                    backgroundColor: "rgba(153, 102, 255, 0.2)",
+                    yAxisID: 'B'
                 },
                 {
                     label: "Reduced",
                     data: reduced,
                     borderColor: "rgba(255, 159, 64, 1)",
-                    backgroundColor: "rgba(255, 159, 64, 0.2)"
+                    backgroundColor: "rgba(255, 159, 64, 0.2)",
+                    yAxisID: 'B'
                 },
                 {
                     label: "Ammonia",
                     data: ammonia,
                     borderColor: "rgba(255, 99, 132, 1)",
-                    backgroundColor: "rgba(255, 99, 132, 0.2)"
+                    backgroundColor: "rgba(255, 99, 132, 0.2)",
+                    yAxisID: 'B'
                 }
             ]
         })
@@ -107,7 +122,7 @@ export default function Graph() {
         <Card className="m-3">
             <CardHeader>Enviro Data</CardHeader>
             <CardBody>
-                {data ? <Line data={data} options={options} /> : null}
+                {data ? <Line data={data} options={options} style={{ minHeight: "500px" }} /> : null}
             </CardBody>
         </Card>
     )
