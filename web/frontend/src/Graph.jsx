@@ -1,14 +1,19 @@
 import { useEffect, useState } from "react";
-import { Card, CardBody, CardHeader } from "reactstrap";
+import { Card, CardBody, CardHeader, DropdownItem, DropdownMenu, DropdownToggle, InputGroup, UncontrolledDropdown } from "reactstrap";
+import { Multiselect } from "multiselect-react-dropdown";
 import { Line } from "react-chartjs-2";
 import { getServerURL } from "./common";
-
 import "chart.js/auto";
 
 export default function Graph() {
     const [data, setData] = useState(undefined)
     const [rate, setRate] = useState(1000)
     const [entries, setEntries] = useState(30)
+    const [selected, setSelected] = useState([
+        { name: 'Temperature', id: 1 },
+        { name: 'Pressure', id: 2 },
+        { name: 'Humidity', id: 3 }
+    ])
 
     const options = {
         maintainAspectRatio: false,
@@ -23,8 +28,35 @@ export default function Graph() {
                 position: 'left',
                 beginAtZero: true
             }
+        },
+        plugins: {
+            legend: {
+                // display: false // TODO: Enable this when if can get multiselect working with colors
+            }
         }
     }
+
+    const state = {
+        options: [
+            { name: 'Temperature', id: 1 },
+            { name: 'Pressure', id: 2 },
+            { name: 'Humidity', id: 3 },
+            { name: 'Light', id: 4 },
+            { name: 'Oxidised', id: 5 },
+            { name: 'Reduced', id: 6 },
+            { name: 'Ammonia', id: 7 }
+        ]
+    }
+
+    const colors = [
+        'rgba(255, 99, 132, 0.2)',
+        'rgba(54, 162, 235, 0.2)',
+        'rgba(255, 206, 86, 0.2)',
+        'rgba(75, 192, 192, 0.2)',
+        'rgba(153, 102, 255, 0.2)',
+        'rgba(255, 159, 64, 0.2)',
+        'rgba(255, 99, 132, 0.2)'
+    ]
 
     let start = 0
     let results = []
@@ -45,69 +77,21 @@ export default function Graph() {
         results = results.slice(-entries)
 
         const id = results.map(d => d[0])
-        const temperature = results.map(d => d[1])
-        const pressure = results.map(d => d[2])
-        const humidity = results.map(d => d[3])
-        const light = results.map(d => d[4])
-        const oxidised = results.map(d => d[5])
-        const reduced = results.map(d => d[6])
-        const ammonia = results.map(d => d[7])
-
         start = id[id.length - 1]
+
+        const sets = [];
+        selected.forEach(s => {
+            sets.push({
+                label: s.name,
+                data: results.map(d => d[s.id]),
+                color: colors[s.id - 1],
+                yAxisID: s.id === 2 ? 'A' : 'B' // Pressure on right, everything else on left
+            })
+        })
 
         setData({
             labels: id,
-            datasets: [
-                {
-                    label: "Pressure",
-                    data: pressure,
-                    borderColor: "rgba(54, 162, 235, 1)",
-                    backgroundColor: "rgba(54, 162, 235, 0.2)",
-                    yAxisID: 'A'
-                },
-                {
-                    label: "Temperature",
-                    data: temperature,
-                    borderColor: "rgba(255, 99, 132, 1)",
-                    backgroundColor: "rgba(255, 99, 132, 0.2)",
-                    yAxisID: 'B'
-                },
-                {
-                    label: "Humidity",
-                    data: humidity,
-                    borderColor: "rgba(255, 206, 86, 1)",
-                    backgroundColor: "rgba(255, 206, 86, 0.2)",
-                    yAxisID: 'B'
-                },
-                {
-                    label: "Light",
-                    data: light,
-                    borderColor: "rgba(75, 192, 192, 1)",
-                    backgroundColor: "rgba(75, 192, 192, 0.2)",
-                    yAxisID: 'B'
-                },
-                {
-                    label: "Oxidised",
-                    data: oxidised,
-                    borderColor: "rgba(153, 102, 255, 1)",
-                    backgroundColor: "rgba(153, 102, 255, 0.2)",
-                    yAxisID: 'B'
-                },
-                {
-                    label: "Reduced",
-                    data: reduced,
-                    borderColor: "rgba(255, 159, 64, 1)",
-                    backgroundColor: "rgba(255, 159, 64, 0.2)",
-                    yAxisID: 'B'
-                },
-                {
-                    label: "Ammonia",
-                    data: ammonia,
-                    borderColor: "rgba(255, 99, 132, 1)",
-                    backgroundColor: "rgba(255, 99, 132, 0.2)",
-                    yAxisID: 'B'
-                }
-            ]
+            datasets: sets
         })
     }
 
@@ -122,7 +106,44 @@ export default function Graph() {
         <Card className="m-3">
             <CardHeader>Enviro Data</CardHeader>
             <CardBody>
-                {data ? <Line data={data} options={options} style={{ minHeight: "500px" }} /> : null}
+                <div className="d-flex justify-content-between flex-wrap">
+                    <Multiselect
+                        options={state.options}
+                        displayValue="name"
+                        placeholder=""
+                        closeIcon="X"
+                        selectedValues={selected}
+                        onSelect={(list, _) => setSelected(list)}
+                        onRemove={(list, _) => setSelected(list)}
+                    />
+                    <div>
+                        <InputGroup>
+                            <UncontrolledDropdown>
+                                <DropdownToggle caret color="primary">Update Rate ({rate})</DropdownToggle>
+                                <DropdownMenu>
+                                    <DropdownItem onClick={() => setRate(250)}>250ms</DropdownItem>
+                                    <DropdownItem onClick={() => setRate(500)}>500ms</DropdownItem>
+                                    <DropdownItem onClick={() => setRate(1000)}>1s</DropdownItem>
+                                    <DropdownItem onClick={() => setRate(2000)}>2s</DropdownItem>
+                                    <DropdownItem onClick={() => setRate(5000)}>5s</DropdownItem>
+                                </DropdownMenu>
+                            </UncontrolledDropdown>
+                            <UncontrolledDropdown className="ml-auto">
+                                <DropdownToggle caret color="primary">Entries ({entries})</DropdownToggle>
+                                <DropdownMenu>
+                                    <DropdownItem onClick={() => setEntries(10)}>10</DropdownItem>
+                                    <DropdownItem onClick={() => setEntries(20)}>20</DropdownItem>
+                                    <DropdownItem onClick={() => setEntries(30)}>30</DropdownItem>
+                                    <DropdownItem onClick={() => setEntries(40)}>40</DropdownItem>
+                                    <DropdownItem onClick={() => setEntries(50)}>50</DropdownItem>
+                                </DropdownMenu>
+                            </UncontrolledDropdown>
+                        </InputGroup>
+                    </div>
+                </div>
+                <div className="mt-3">
+                    {data ? <Line data={data} options={options} style={{ height: "500px" }} /> : null}
+                </div>
             </CardBody>
         </Card>
     )
