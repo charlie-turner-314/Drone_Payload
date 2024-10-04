@@ -49,13 +49,13 @@ export default function Graph() {
     }
 
     const colors = [
-        'rgba(255, 99, 132, 0.2)',
-        'rgba(54, 162, 235, 0.2)',
-        'rgba(255, 206, 86, 0.2)',
-        'rgba(75, 192, 192, 0.2)',
-        'rgba(153, 102, 255, 0.2)',
-        'rgba(255, 159, 64, 0.2)',
-        'rgba(255, 99, 132, 0.2)'
+        'rgba(255, 99, 132, 1.0)',
+        'rgba(54, 162, 235, 1.0)',
+        'rgba(255, 206, 86, 1.0)',
+        'rgba(75, 192, 192, 1.0)',
+        'rgba(153, 102, 255, 1.0)',
+        'rgba(255, 159, 64, 1.0)',
+        'rgba(255, 99, 132, 1.0)'
     ]
 
     let start = 0
@@ -84,7 +84,8 @@ export default function Graph() {
             sets.push({
                 label: s.name,
                 data: results.map(d => d[s.id]),
-                color: colors[s.id - 1],
+                borderColor: colors[s.id - 1],
+                backgroundColor: colors[s.id - 1],
                 yAxisID: s.id === 2 ? 'A' : 'B' // Pressure on right, everything else on left
             })
         })
@@ -100,7 +101,7 @@ export default function Graph() {
             getData()
         }, rate)
         return () => clearInterval(interval)
-    }, [])
+    }, [rate, entries, selected])
 
     return (
         <Card className="m-3">
@@ -111,7 +112,7 @@ export default function Graph() {
                         options={state.options}
                         displayValue="name"
                         placeholder=""
-                        closeIcon="X"
+                        closeIcon="cancel"
                         selectedValues={selected}
                         onSelect={(list, _) => setSelected(list)}
                         onRemove={(list, _) => setSelected(list)}
