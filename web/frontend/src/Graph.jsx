@@ -4,6 +4,7 @@ import { Multiselect } from "multiselect-react-dropdown";
 import { Line } from "react-chartjs-2";
 import { getServerURL } from "./common";
 import "chart.js/auto";
+import "./Graph.css";
 
 export default function Graph() {
     const [data, setData] = useState(undefined)
@@ -31,7 +32,7 @@ export default function Graph() {
         },
         plugins: {
             legend: {
-                // display: false // TODO: Enable this when if can get multiselect working with colors
+                display: false
             }
         }
     }
@@ -116,6 +117,9 @@ export default function Graph() {
                         selectedValues={selected}
                         onSelect={(list, _) => setSelected(list)}
                         onRemove={(list, _) => setSelected(list)}
+                        selectedValueDecorator={(text, opt) => {
+                            return <span className={"chip-id-" + opt.id}>{text}</span>
+                        }}
                     />
                     <div>
                         <InputGroup>
