@@ -1,0 +1,9 @@
+#!/usr/bin/env python3
+
+from gpiozero import AngularServo
+from time import sleep
+
+servo = AngularServo(12, min_pulse_width = 0.0006, max_pulse_width = 0.0023)
+
+servo.angle = -90
+sleep(0.12)

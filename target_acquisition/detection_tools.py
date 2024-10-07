@@ -1,22 +1,12 @@
-from ultralytics import YOLO
-from ultralytics.models import YOLO as YOLO_Model
 from ultralytics.engine.results import Results, Boxes
 import numpy as np
 from PIL import Image
-
-model: YOLO_Model = None
-
-model = YOLO("model/weights.pt")
 
 class CLASSES:
     BASE = 0
     MAXIMUM = 1
     MINIMUM = 2
     TIP = 3
-
-def detect(image:np.ndarray):
-    res = model(image, save=True)
-    return res
 
 import numpy as np
 
@@ -49,7 +39,6 @@ def calculate_sweep_angle(needle_base, min_coord, max_coord):
     """
     angle = angle_between(min_coord, needle_base, max_coord )
     sweep_angle = 2*np.pi-angle
-    print(sweep_angle)
     return sweep_angle
 
 def calculate_pressure(needle_base, needle_tip, min_coord, max_coord, min_value, max_value):

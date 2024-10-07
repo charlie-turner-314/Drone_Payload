@@ -180,12 +180,14 @@ def main():
             st7735.display(img)
 
         if mode == 2:
-            try:
-                image, details = camera.get_frame(rgb_only=True)
-                # Resize the image to fit the LCD screen
-                # image.thumbnail((HEIGHT, WIDTH))
+            # try:
+            image, details = camera.get_frame(rgb_only=False)
+            # Resize the image to fit the LCD screen
+            if image:
+                image = image.resize((WIDTH, HEIGHT))
                 st7735.display(image)
-            except Exception as e:
-                if e == KeyboardInterrupt:
-                    sys.exit()
-                logging.error(f"Failed to get image: {e}")
+            # except Exception as e:
+            #     if e == KeyboardInterrupt:
+            #         sys.exit()
+            #     logging.error(f"Failed to get image: {e}")
+            #     logging.error(e.__traceback__)
