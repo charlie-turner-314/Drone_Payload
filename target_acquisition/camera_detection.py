@@ -1,8 +1,7 @@
 
 import depthai as dai
-from PIL import Image , ImageDraw , ImageFont
+from PIL import Image
 from .detection_tools import calculate_pressure
-from sampling import sampling_tube
 import cv2
 import numpy as np
 import json
@@ -170,8 +169,8 @@ class CameraDetection:
             details['detections'] = detections
             if "aruco" in labels:
                 aruco = self._detect_aruco(rgb)
+                details['aruco'] = aruco
             # detect gauges
-            details['aruco'] = aruco
             if "gauge_bbox" in labels:
                 required_labels = ["gauge_min", "gauge_max", "gauge_tip", "gauge_base"]
                 if all(label in labels for label in required_labels):

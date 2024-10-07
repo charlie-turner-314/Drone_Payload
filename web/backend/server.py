@@ -8,7 +8,8 @@ from flask_cors import CORS
 from threading import Thread
 
 from .dummy import get_imagery_data, Video
-from enviro.enviro_logging import get_data as get_enviro_data
+print("Importing Enviro")
+from enviro.enviro import get_data as get_enviro_data, display_loop, init_hardware
 
 # Constants
 LOOP_DELAY = 1  # seconds
@@ -20,8 +21,8 @@ cur = None
 running = True
 
 app = Flask(__name__)
-cors = CORS(app)
-app.config["CORS_HEADERS"] = "Content-Type"
+CORS(app)
+
 
 
 @app.errorhandler(404)
@@ -34,6 +35,7 @@ def page_not_found(e):
 
 @app.route("/test")
 def get_test():
+    print("TEST")
     return jsonify(
         error=False,
         data="Success",
@@ -60,6 +62,11 @@ def get_enviro():
     global cur
 
     start = request.args.get("start", 0)
+    # try to convert to int, if not possible, default to 0
+    try:
+        start = int(start)
+    except ValueError:
+        start = 0
 
     cur.execute("SELECT * FROM enviro WHERE id > %s ORDER BY id ASC", (start,))
     data = cur.fetchall()
@@ -98,7 +105,7 @@ def get_video():
     )
 
 
-def read_all():
+def read_all(bme280, ltr559):
     global conn
     global cur
     global running
@@ -108,13 +115,26 @@ def read_all():
         time.sleep(max(0, next_time - time.time()))
 
         # Get data
-        enviro = get_enviro_data()
-        imagery = get_imagery_data()
+        enviro = get_enviro_data(bme280, ltr559)
+        imagery = {}
 
         # Insert data into database
         cur.execute(
             "INSERT INTO data (temperature, pressure, humidity, light, oxidised, reduced, nh3, valve_state, aruco_id, aruco_pose_x, aruco_pose_y, guage) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-            (*enviro, *imagery),
+            (
+                enviro.get("temperature"),
+                enviro.get("pressure"),
+                enviro.get("humidity"),
+                enviro.get("light"),
+                enviro.get("oxidised"),
+                enviro.get("reduced"),
+                enviro.get("nh3"),
+                imagery.get("valve_state"),
+                imagery.get("aruco_id"),
+                imagery.get("aruco_pose_x"),
+                imagery.get("aruco_pose_y"),
+                imagery.get("guage"),
+            )
         )
         conn.commit()
 
@@ -143,13 +163,22 @@ def main():
     )
     cur = conn.cursor()
 
+    # Get Hardware Handles
+    bme280, ltr559, st7735_display = init_hardware()
+
+    # Start display thread
+    display_thread = Thread(target=display_loop, args=(st7735_display, bme280, ltr559))
+    display_thread.start()
+
     # Start reading data
-    thread = Thread(target=read_all)
+    thread = Thread(target=read_all, args=(bme280, ltr559))
     thread.start()
 
     # Start web server
-    app.run(host=config["FLASK_HOST"], port=config["FLASK_PORT"], debug=True)
+    print("Starting server")
+    app.run(host=config["FLASK_HOST"], port=config["FLASK_PORT"], debug=False)
 
     # Cleanup
     running = False
     thread.join()
+    display_thread.join()
