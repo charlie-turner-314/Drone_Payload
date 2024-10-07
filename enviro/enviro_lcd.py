@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
 import colorsys
-import sys
 import time
-import cv2
 import st7735
-import numpy as np
 
 try:
     # Transitional fix for breaking change in LTR559
@@ -19,7 +16,6 @@ from bme280 import BME280
 from fonts.ttf import RobotoMedium as UserFont
 from PIL import Image, ImageDraw, ImageFont
 from pms5003 import PMS5003
-from pms5003 import ReadTimeoutError as pmsReadTimeoutError
 from enviroplus import gas
 import subprocess
 from fonts.ttf import RobotoMedium as UserFont

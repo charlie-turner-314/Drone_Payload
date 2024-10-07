@@ -6,6 +6,7 @@ from sampling import sampling_tube
 import cv2
 import numpy as np
 import json
+from time import sleep
 
 
 class CameraDetection:
@@ -14,7 +15,6 @@ class CameraDetection:
         self._init_aruco()
         self.nn_path = "/home/team6/Drone/target_acquisition/model/best_openvino_2022.1_6shave.blob"
         self.pipeline = self.setup_camera()
-        # self.get_camera_intrinsics()
         self.device = dai.Device(self.pipeline)
         self.device.startPipeline() 
         self.rgb_queue = self.device.getOutputQueue("rgb", maxSize=8, blocking=False)
@@ -28,14 +28,14 @@ class CameraDetection:
             print("Restarting pipeline...")
             # Close the existing device connection
             self.device.close()
+            # Wait for the device to close
+            sleep(1)
             # Reinitialize the device with the pipeline
-            self.device = dai.Device(self.pipeline)
+            self.device = dai.Device(self.pipeline, maxUsbSpeed=dai.UsbSpeed.SUPER_PLUS)
             self.device.startPipeline()
             # Recreate the output queues
             self.rgb_queue = self.device.getOutputQueue("rgb", maxSize=8, blocking=False)
             self.detection_queue = self.device.getOutputQueue("nn", maxSize=8, blocking=False)
-            # Reinitialize camera intrinsics if needed
-            self._init_camera_intrinsics()
             print("Pipeline restarted successfully.")
         except Exception as e:
             print(f"Failed to restart pipeline: {e}")
@@ -83,8 +83,8 @@ class CameraDetection:
         cam_rgb.setPreviewSize(640, 640)
         cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam_rgb.setInterleaved(False)
-        cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB) # maybe this
-        cam_rgb.setFps(5)
+        cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+        cam_rgb.setFps(10)
 
         # # Setup the neural network node
         detection_nn = pipeline.createYoloDetectionNetwork()
@@ -150,12 +150,10 @@ class CameraDetection:
         try:
             if rgb_only:
                 # get the rgb image from the camera
-                rgb = self.rgb_queue.get()
+                rgb = self.rgb_queue.tryGet()
                 if rgb is None:
                     return None, details
                 rgb = rgb.getCvFrame()
-                # aruco = self._detect_aruco(rgb)
-                # print(aruco)
                 rgb = Image.fromarray(rgb)
                 return rgb, details
             
@@ -169,10 +167,11 @@ class CameraDetection:
             detections = detections_nndata.detections
             annotated = self._annotate_frame(rgb, detections)
             labels = [self.labels[detection.label] for detection in detections]
+            details['detections'] = detections
             if "aruco" in labels:
                 aruco = self._detect_aruco(rgb)
-                print(aruco)
             # detect gauges
+            details['aruco'] = aruco
             if "gauge_bbox" in labels:
                 required_labels = ["gauge_min", "gauge_max", "gauge_tip", "gauge_base"]
                 if all(label in labels for label in required_labels):
@@ -212,14 +211,9 @@ class CameraDetection:
                             min_value, 
                             max_value
                         )
-                        
-                        if pressure < 4:
-                            print(pressure)
-                            sampling_tube.extend()
-
+                        details['pressure'] = pressure
                     else:
                         print("Not all required gauge parts were detected.")
-
             # convert the image to a PIL image
             annotated = Image.fromarray(annotated)
             return annotated, details
@@ -242,7 +236,7 @@ class CameraDetection:
         Initialize the ArUco detector.
         """
         # Load the predefined dictionary
-        self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_250)
+        self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_5X5_250)
         
         # Initialize the detector parameters using default values
         self.parameters = cv2.aruco.DetectorParameters()
@@ -272,7 +266,7 @@ class CameraDetection:
         
         # Define the 3D coordinates of the marker's corners in the marker's own reference frame
         # Assuming a square marker with side length 0.05 meters
-        marker_length = 0.05
+        marker_length = 0.2
         marker_corners_3d = np.array([
             [-marker_length / 2, marker_length / 2, 0],
             [marker_length / 2, marker_length / 2, 0],

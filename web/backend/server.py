@@ -7,8 +7,8 @@ from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from threading import Thread
 
-from .dummy import get_enviro_data, get_imagery_data, Video
-# from enviro.enviro_logging import get_data as get_enviro_data
+from .dummy import get_imagery_data, Video
+from enviro.enviro_logging import get_data as get_enviro_data
 
 # Constants
 LOOP_DELAY = 1  # seconds
@@ -130,8 +130,8 @@ def main():
 
     # Load environment variables
     config = {
-        **dotenv_values(".env"),
         **os.environ,
+        **dotenv_values(".env")
     }
 
     # Initialize database connection
