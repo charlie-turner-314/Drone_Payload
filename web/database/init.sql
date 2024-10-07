@@ -11,6 +11,7 @@ CREATE TABLE data (
     aruco_id INTEGER,
     aruco_pose_x REAL,
     aruco_pose_y REAL,
+    aruco_pose_z REAL,
     guage REAL,
     time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

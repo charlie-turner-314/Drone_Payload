@@ -5,11 +5,13 @@ import time
 from dotenv import dotenv_values
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
-from threading import Thread
-
+from threading import Thread, Lock
+from io import BytesIO
+from PIL import Image
 from .dummy import get_imagery_data, Video
 print("Importing Enviro")
-from enviro.enviro import get_data as get_enviro_data, display_loop, init_hardware
+from enviro.enviro import get_data as get_enviro_data, display_loop, init_hardware, VideoFeed, video_feed_loop
+import logging
 
 # Constants
 LOOP_DELAY = 1  # seconds
@@ -18,7 +20,7 @@ LOOP_DELAY = 1  # seconds
 config = None
 conn = None
 cur = None
-running = True
+vide_feed = None
 
 app = Flask(__name__)
 CORS(app)
@@ -90,37 +92,51 @@ def get_imagery():
     )
 
 
-def video_gen(video):
+def video_gen():
     while True:
-        frame = video.get_frame()
-        if frame is None:
-            break
-        yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
+        frame = video_feed.get_frame()
+        if frame:
+            try:
+                # Assuming 'frame' is a PIL Image. If it's already bytes, adjust accordingly.
+                buffer = BytesIO()
+                frame.save(buffer, format='JPEG')
+                frame_bytes = buffer.getvalue()
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            except Exception as e:
+                logging.error("Failed to encode frame: %s", e)
+        else:
+            logging.warning("No frame available to stream.")
+        time.sleep(0.05)  # Adjust the sleep time as needed
 
 
 @app.route("/video")
 def get_video():
     return Response(
-        video_gen(Video()), mimetype="multipart/x-mixed-replace; boundary=frame"
+        video_gen(),
+        mimetype="multipart/x-mixed-replace; boundary=frame"
     )
 
 
-def read_all(bme280, ltr559):
+def read_all(bme280, ltr559, video_feed:VideoFeed):
     global conn
     global cur
-    global running
 
     next_time = time.time() + LOOP_DELAY
-    while running:
+    while True:
         time.sleep(max(0, next_time - time.time()))
 
         # Get data
         enviro = get_enviro_data(bme280, ltr559)
-        imagery = {}
+        video_details = video_feed.get_details()
+        print(video_details)
+        if not video_details:
+            video_details = {}
+
 
         # Insert data into database
         cur.execute(
-            "INSERT INTO data (temperature, pressure, humidity, light, oxidised, reduced, nh3, valve_state, aruco_id, aruco_pose_x, aruco_pose_y, guage) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            "INSERT INTO data (temperature, pressure, humidity, light, oxidised, reduced, nh3, valve_state, aruco_id, aruco_pose_x, aruco_pose_y, aruco_pose_z, guage) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (
                 enviro.get("temperature"),
                 enviro.get("pressure"),
@@ -129,11 +145,12 @@ def read_all(bme280, ltr559):
                 enviro.get("oxidised"),
                 enviro.get("reduced"),
                 enviro.get("nh3"),
-                imagery.get("valve_state"),
-                imagery.get("aruco_id"),
-                imagery.get("aruco_pose_x"),
-                imagery.get("aruco_pose_y"),
-                imagery.get("guage"),
+                video_details.get("valve_state"),
+                video_details.get("aruco_id"),
+                video_details.get("aruco_pose").get("x"),
+                video_details.get("aruco_pose").get("y"),
+                video_details.get("aruco_pose").get("z"),
+                video_details.get("pressure"),
             )
         )
         conn.commit()
@@ -145,8 +162,8 @@ def main():
     global config
     global conn
     global cur
-    global running
     global app
+    global video_feed
 
     # Load environment variables
     config = {
@@ -166,12 +183,18 @@ def main():
     # Get Hardware Handles
     bme280, ltr559, st7735_display = init_hardware()
 
+    # get video feed handle 
+    video_feed = VideoFeed()
+    # start video feed thread
+    video_thread = Thread(target=video_feed_loop, args=(video_feed,), daemon=True)
+    video_thread.start()
+
     # Start display thread
-    display_thread = Thread(target=display_loop, args=(st7735_display, bme280, ltr559))
+    display_thread = Thread(target=display_loop, args=(st7735_display, bme280, ltr559, video_feed), daemon=True)
     display_thread.start()
 
     # Start reading data
-    thread = Thread(target=read_all, args=(bme280, ltr559))
+    thread = Thread(target=read_all, args=(bme280, ltr559, video_feed), daemon=True)
     thread.start()
 
     # Start web server
@@ -179,6 +202,4 @@ def main():
     app.run(host=config["FLASK_HOST"], port=config["FLASK_PORT"], debug=False)
 
     # Cleanup
-    running = False
-    thread.join()
-    display_thread.join()
+    print("Cleaning up")

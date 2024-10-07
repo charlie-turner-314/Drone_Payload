@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import json
 from time import sleep
+import logging
 
 
 class CameraDetection:
@@ -82,7 +83,7 @@ class CameraDetection:
         cam_rgb.setPreviewSize(640, 640)
         cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         cam_rgb.setInterleaved(False)
-        cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+        cam_rgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         cam_rgb.setFps(10)
 
         # # Setup the neural network node
@@ -137,25 +138,20 @@ class CameraDetection:
         Read a frame from the camera, do object detection and processing, then return the frame and the detections
 
         details:
-        [
-            open/closed
-            int aruca id
-            x, y, z of aruca
-            float pressure
-        ]
+        {
+            valve_state: "open" | "closed",
+            aruco_id: int,
+            aruco_pose: {
+                x: float,
+                y: float,
+                z: float
+            },
+            pressure: float,
+        }
         """
         # for now just return empty details and the raw rgb image
         details = {}
         try:
-            if rgb_only:
-                # get the rgb image from the camera
-                rgb = self.rgb_queue.tryGet()
-                if rgb is None:
-                    return None, details
-                rgb = rgb.getCvFrame()
-                rgb = Image.fromarray(rgb)
-                return rgb, details
-            
             # get the detections
             detections_nndata = self.detection_queue.tryGet()
             # get the rgb image from the camera
@@ -164,18 +160,35 @@ class CameraDetection:
                 return None, details
             rgb = rgb.getCvFrame()
             detections = detections_nndata.detections
-            annotated = self._annotate_frame(rgb, detections)
+            annotated = rgb
+            if not rgb_only:
+                annotated = self._annotate_frame(rgb, detections)
             labels = [self.labels[detection.label] for detection in detections]
             details['detections'] = detections
             if "aruco" in labels:
                 aruco = self._detect_aruco(rgb)
-                details['aruco'] = aruco
-            # detect gauges
+                if len(aruco) > 1:
+                    logging.warning("Multiple ArUco markers detected. Using the first one.")
+                for marker in aruco:
+                    # there may be multiple, lets just use the first one
+                    if not rgb_only:
+                        cv2.aruco.drawAxis(annotated, self.intrinsics["calibrationMatrix"], self.intrinsics["distortionCoefficients"], marker['rvec'], marker['tvec'], 0.1)
+                        cv2.aruco.drawDetectedMarkers(annotated, [marker['corners']])
+                    details['aruco_id'] = marker['id']
+                    details['aruco_pose'] = {
+                        'x': marker['tvec'][0],
+                        'y': marker['tvec'][1],
+                        'z': marker['tvec'][2]
+                    }
+                    break
             if "gauge_bbox" in labels:
+                # Calculate Pressure
                 required_labels = ["gauge_min", "gauge_max", "gauge_tip", "gauge_base"]
                 if all(label in labels for label in required_labels):
                     # Initialize dictionary to store best detections
                     best_detections = {}
+
+                    # Extract best detections for each required part (based on confidence)
                     for detection in detections:
                         label = self.labels[detection.label]
                         if label in required_labels:
@@ -200,6 +213,7 @@ class CameraDetection:
                         needle_base_coords = get_center_coords(best_detections['gauge_base'])
 
                         # Calculate pressure
+                        # TODO: Extract magic numbers into configuration file
                         min_value = 0
                         max_value = 10
                         pressure = calculate_pressure(

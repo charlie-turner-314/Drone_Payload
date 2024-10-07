@@ -1,6 +1,7 @@
 import time
 import logging
 import subprocess
+from threading import Lock
 
 # Import your modules
 import colorsys
@@ -104,14 +105,45 @@ def get_data(bme280, ltr559):
         }
     except Exception as e:
         logging.error("Failed to get sensor data, error: %s", e)
+    
+class VideoFeed:
+    def __init__(self):
+        self.lock = Lock()
+        self.frame = None
+        self.details = {}
+
+    def update(self, frame, details):
+        with self.lock:
+            self.frame = frame
+            self.details = details
+
+    def get_frame(self):
+        with self.lock:
+            return self.frame
+    
+    def get_details(self):
+        with self.lock:
+            return self.details
+
+# video feed thread - constantly updates the video feed
+def video_feed_loop(video_feed):
+    camera = CameraDetection()
+    logging.info("Starting video feed thread.")
+    while True:
+        try:
+            image, details = camera.get_frame(rgb_only=False)
+            if image:
+                video_feed.update(image, details)
+        except Exception as e:
+            logging.error("Video feed error: %s", e)
+        time.sleep(0.05)  # Adjust the sleep time as needed
 
 # Display thread function
-def display_loop(st7735_display, bme280, ltr559):
+def display_loop(st7735_display, bme280, ltr559, video_feed):
 
     logging.info("Starting display loop.")
 
     WIDTH, HEIGHT = st7735_display.width, st7735_display.height
-    camera = CameraDetection()
     factor = 2.25
     mode = 2
     last_page = 0
@@ -166,9 +198,9 @@ def display_loop(st7735_display, bme280, ltr559):
             
             elif mode == 2:
                 # Camera mode
-                image, details = camera.get_frame(rgb_only=False)
-                if image:
-                    image = image.resize((WIDTH, HEIGHT))
+                frame = video_feed.get_frame()
+                if frame:
+                    image = frame.resize((WIDTH, HEIGHT))
                     st7735_display.display(image)
         except Exception as e:
             logging.error("Failed to display data, error: %s", e)
