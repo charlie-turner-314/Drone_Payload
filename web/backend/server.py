@@ -1,6 +1,7 @@
 import os
 import psycopg2
 import time
+import asyncio
 
 from dotenv import dotenv_values
 from flask import Flask, jsonify, request, Response
@@ -9,10 +10,12 @@ from threading import Thread, Lock
 from io import BytesIO
 from PIL import Image
 from .dummy import get_imagery_data, Video
+from sampling.sampling_tube import extend, retract
 from enviro.enviro import get_data as get_enviro_data, display_loop, init_hardware, VideoFeed, video_feed_loop, write_ip_address
 import logging
 import atexit
 import subprocess
+
 
 # Constants
 
@@ -23,6 +26,11 @@ config = None
 conn = None
 cur = None
 vide_feed = None
+
+tube_state = "retracted"
+last_tube_time = None
+EXTEND_TIME = 5 # Seconds
+TUBE_COOLDOWN = 20 # Seconds
 
 app = Flask(__name__)
 CORS(app)
@@ -90,7 +98,11 @@ def get_imagery():
         # aruco_pose_y,
         # aruco_pose_z,
         # guage
-    data = cur.fetchone()
+    try:
+        data = cur.fetchone()
+    except Exception as e:
+        logging.error("Failed to get imagery data: %s", e)
+        data = None
 
     return jsonify(
         error=False,
@@ -123,6 +135,19 @@ def get_video():
         mimetype="multipart/x-mixed-replace; boundary=frame"
     )
 
+async def handle_sampling_tube():
+    global tube_state
+    global last_tube_time
+    time_now = time.time()
+    if last_tube_time is not None and time_now - last_tube_time < TUBE_COOLDOWN:
+        logging.info("Tube is cooling down, skipping")
+        return
+    tube_state = "extended"
+    last_tube_time = time_now
+    extend()
+    await asyncio.sleep(EXTEND_TIME)
+    retract()
+    tube_state = "retracted"
 
 def read_all(bme280, ltr559, video_feed:VideoFeed):
     global conn
@@ -138,6 +163,9 @@ def read_all(bme280, ltr559, video_feed:VideoFeed):
         if not video_details:
             video_details = {}
 
+        pressure = video_details.get("pressure")
+        if pressure is not None and pressure < 2 and tube_state == "retracted":
+            asyncio.run(handle_sampling_tube())
 
         # Insert data into database
         cur.execute(
@@ -211,8 +239,6 @@ def main():
         logging.info("Cleaning up Hardware")
         # write the ip address of the pi to the display
         write_ip_address(st7735_display)
-
-
 
     atexit.register(cleanup_at_exit)
 
