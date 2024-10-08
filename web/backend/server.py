@@ -9,11 +9,13 @@ from threading import Thread, Lock
 from io import BytesIO
 from PIL import Image
 from .dummy import get_imagery_data, Video
-print("Importing Enviro")
-from enviro.enviro import get_data as get_enviro_data, display_loop, init_hardware, VideoFeed, video_feed_loop
+from enviro.enviro import get_data as get_enviro_data, display_loop, init_hardware, VideoFeed, video_feed_loop, write_ip_address
 import logging
+import atexit
+import subprocess
 
 # Constants
+
 LOOP_DELAY = 1  # seconds
 
 # Global variables
@@ -25,8 +27,6 @@ vide_feed = None
 app = Flask(__name__)
 CORS(app)
 
-
-
 @app.errorhandler(404)
 def page_not_found(e):
     return jsonify(
@@ -37,7 +37,6 @@ def page_not_found(e):
 
 @app.route("/test")
 def get_test():
-    print("TEST")
     return jsonify(
         error=False,
         data="Success",
@@ -84,6 +83,13 @@ def get_imagery():
     global cur
 
     cur.execute("SELECT * FROM imagery ORDER BY id DESC LIMIT 1")
+        # id,
+        # valve_state,
+        # aruco_id,
+        # aruco_pose_x,
+        # aruco_pose_y,
+        # aruco_pose_z,
+        # guage
     data = cur.fetchone()
 
     return jsonify(
@@ -129,7 +135,6 @@ def read_all(bme280, ltr559, video_feed:VideoFeed):
         # Get data
         enviro = get_enviro_data(bme280, ltr559)
         video_details = video_feed.get_details()
-        print(video_details)
         if not video_details:
             video_details = {}
 
@@ -147,9 +152,9 @@ def read_all(bme280, ltr559, video_feed:VideoFeed):
                 enviro.get("nh3"),
                 video_details.get("valve_state"),
                 video_details.get("aruco_id"),
-                video_details.get("aruco_pose").get("x"),
-                video_details.get("aruco_pose").get("y"),
-                video_details.get("aruco_pose").get("z"),
+                video_details.get("aruco_pose_x"),
+                video_details.get("aruco_pose_y"),
+                video_details.get("aruco_pose_z"),
                 video_details.get("pressure"),
             )
         )
@@ -197,9 +202,21 @@ def main():
     thread = Thread(target=read_all, args=(bme280, ltr559, video_feed), daemon=True)
     thread.start()
 
-    # Start web server
-    print("Starting server")
-    app.run(host=config["FLASK_HOST"], port=config["FLASK_PORT"], debug=False)
 
-    # Cleanup
-    print("Cleaning up")
+    def cleanup_at_exit():
+        logging.info("Cleaning up database")
+        cur.close()
+        conn.close()
+
+        logging.info("Cleaning up Hardware")
+        # write the ip address of the pi to the display
+        write_ip_address(st7735_display)
+
+
+
+    atexit.register(cleanup_at_exit)
+
+
+    # Start web server
+    logging.info("Starting web server")
+    app.run(host=config["FLASK_HOST"], port=config["FLASK_PORT"], debug=False)

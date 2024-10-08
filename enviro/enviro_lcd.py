@@ -54,7 +54,6 @@ st7735.begin()
 
 WIDTH = st7735.width
 HEIGHT = st7735.height
-print(WIDTH, HEIGHT)
 # The position of the top bar
 TOP_POS = 25
 
@@ -134,7 +133,6 @@ def main():
 
         # If the proximity crosses the threshold, toggle the mode
         if proximity > 1500 and time.time() - last_page > delay:
-            print("Changing Mode")
             mode += 1
             mode %= 3
             last_page = time.time()

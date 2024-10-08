@@ -25,7 +25,7 @@ class CameraDetection:
         Safely restarts the DepthAI pipeline and reinitializes the device and output queues.
         """
         try:
-            print("Restarting pipeline...")
+            logging.info("Restarting the pipeline.")
             # Close the existing device connection
             self.device.close()
             # Wait for the device to close
@@ -36,9 +36,8 @@ class CameraDetection:
             # Recreate the output queues
             self.rgb_queue = self.device.getOutputQueue("rgb", maxSize=8, blocking=False)
             self.detection_queue = self.device.getOutputQueue("nn", maxSize=8, blocking=False)
-            print("Pipeline restarted successfully.")
         except Exception as e:
-            print(f"Failed to restart pipeline: {e}")
+            logging.error("Failed to restart the pipeline: %s", e)
 
     def _init_camera_intrinsics(self):
         """
@@ -139,7 +138,7 @@ class CameraDetection:
 
         details:
         {
-            valve_state: "open" | "closed",
+            valve_state: "open":True | "closed":False,
             aruco_id: int,
             aruco_pose: {
                 x: float,
@@ -165,21 +164,35 @@ class CameraDetection:
                 annotated = self._annotate_frame(rgb, detections)
             labels = [self.labels[detection.label] for detection in detections]
             details['detections'] = detections
-            if "aruco" in labels:
+            valve_conf = {'open': 0, 'closed': 0}
+
+            for detection in detections:
+                label = self.labels[detection.label]
+                if label == "valve_closed":
+                    valve_conf['closed'] = max(valve_conf['closed'], detection.confidence)
+                elif label == "valve_open":
+                    valve_conf['open'] = max(valve_conf['open'], detection.confidence)
+
+            if valve_conf['closed'] > valve_conf['open']:
+                details['valve_state'] = False
+            elif valve_conf['open'] > valve_conf['closed']:
+                details['valve_state'] = True
+            else:
+                details['valve_state'] = None
+                
+
+            if True: #"aruco" in labels:
                 aruco = self._detect_aruco(rgb)
                 if len(aruco) > 1:
                     logging.warning("Multiple ArUco markers detected. Using the first one.")
                 for marker in aruco:
                     # there may be multiple, lets just use the first one
                     if not rgb_only:
-                        cv2.aruco.drawAxis(annotated, self.intrinsics["calibrationMatrix"], self.intrinsics["distortionCoefficients"], marker['rvec'], marker['tvec'], 0.1)
-                        cv2.aruco.drawDetectedMarkers(annotated, [marker['corners']])
-                    details['aruco_id'] = marker['id']
-                    details['aruco_pose'] = {
-                        'x': marker['tvec'][0],
-                        'y': marker['tvec'][1],
-                        'z': marker['tvec'][2]
-                    }
+                        cv2.aruco.drawDetectedMarkers(annotated, [marker['corners']], borderColor=(255, 0, 0))
+                    details['aruco_id'] = int(marker['id'])
+                    details['aruco_pose_x'] = float(marker['tvec'][0])
+                    details['aruco_pose_y'] = float(marker['tvec'][1])
+                    details['aruco_pose_z'] = float(marker['tvec'][2])
                     break
             if "gauge_bbox" in labels:
                 # Calculate Pressure
@@ -226,20 +239,20 @@ class CameraDetection:
                         )
                         details['pressure'] = pressure
                     else:
-                        print("Not all required gauge parts were detected.")
+                        logging.warning("Not all required parts detected for pressure gauge.")
             # convert the image to a PIL image
             annotated = Image.fromarray(annotated)
             return annotated, details
         except RuntimeError as e:
-            print(f"RuntimeError occurred: {e}")
+            logging.error(f"An error occurred: {e}")
             if 'X_LINK_ERROR' in str(e):
-                print("Communication error detected. Attempting to restart the device.")
+                logging.warning("X_LINK_ERROR occurred. Restarting the pipeline.")
                 self._restart_pipeline()
                 return None, details
             else:
                 raise e
         except Exception as e:
-            print(f"An unexpected exception occurred: {e}")
+            logging.error(f"An error occurred: {e}")
             self._restart_pipeline()
             return None, details
     
@@ -279,7 +292,8 @@ class CameraDetection:
         
         # Define the 3D coordinates of the marker's corners in the marker's own reference frame
         # Assuming a square marker with side length 0.05 meters
-        marker_length = 0.2
+        # TODO: Extract the marker length into a configuration file
+        marker_length = 0.065
         marker_corners_3d = np.array([
             [-marker_length / 2, marker_length / 2, 0],
             [marker_length / 2, marker_length / 2, 0],

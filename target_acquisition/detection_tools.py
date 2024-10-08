@@ -1,6 +1,7 @@
 from ultralytics.engine.results import Results, Boxes
 import numpy as np
 from PIL import Image
+import logging
 
 class CLASSES:
     BASE = 0
@@ -19,7 +20,7 @@ def get_pressure_from_detections(detections:Boxes, min_value=0, max_value=1):
         if c == CLASSES.TIP: tip = detections.xywh[id][:2]
     
     if not (detections.cls == CLASSES.BASE).any() or not (detections.cls == CLASSES.TIP).any() or not (detections.cls == CLASSES.MINIMUM).any() or not (detections.cls == CLASSES.MINIMUM).any():
-        print("Missing a class")
+        logging.error("Missing one of the required detections")
         return None
 
     pressure = calculate_pressure(base, tip, minimum, maximum, min_value, max_value)

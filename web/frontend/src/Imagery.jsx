@@ -8,6 +8,7 @@ export default function Imagery() {
         arucoID: null,
         arucoPoseX: null,
         arucoPoseY: null,
+        arucoPoseZ: null,
         pressureGuage: null
     })
     const [rate, setRate] = useState(1000)
@@ -25,14 +26,15 @@ export default function Imagery() {
 
         // FIXME: Sometimes data is null, IDK why
         if (!json.data)
-            json.data = [null, null, null, null, null, null]
+            json.data = [null, null, null, null, null, null, null]
 
         setData({
             valveState: json.data[1],
             arucoID: json.data[2],
             arucoPoseX: json.data[3],
             arucoPoseY: json.data[4],
-            pressureGuage: json.data[5]
+            arucoPoseZ: json.data[5],
+            pressureGuage: json.data[6]
         })
     }
 
@@ -49,7 +51,7 @@ export default function Imagery() {
             <CardBody>
                 <p><b>Valve State</b>: {data.valveState === null ? "" : data.valveState ? "Open" : "Closed"}</p>
                 <p><b>ArUCO ID</b>: {data.arucoID}</p>
-                <p><b>ArUCO Position</b>: {data.arucoID === null ? "" : `(${data.arucoPoseX}, ${data.arucoPoseY})`}</p>
+                <p><b>ArUCO Position</b>: {data.arucoID === null ? "" : `(${data.arucoPoseX}, ${data.arucoPoseY}, ${data.arucoPoseZ})`}</p>
                 <p><b>Pressure Guage</b>: {data.pressureGuage}</p>
             </CardBody>
         </Card>

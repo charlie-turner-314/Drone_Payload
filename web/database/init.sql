@@ -35,5 +35,6 @@ CREATE VIEW imagery AS
         aruco_id,
         aruco_pose_x,
         aruco_pose_y,
+        aruco_pose_z,
         guage
     FROM data;
