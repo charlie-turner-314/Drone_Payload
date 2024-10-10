@@ -33,10 +33,9 @@ export default function Imagery() {
         if (mute) {
             return
         }
-
         speech.speak({
             text: text,
-            queue: false
+            queue: true
         }).catch(e => {
             console.error("Failed to speak: ", e)
         })
@@ -58,7 +57,13 @@ export default function Imagery() {
             json.data = [null, null, null, null, null, null, null]
 
         if (json.data[1] !== null) {
-            speak(`Valve state is ${json.data[1] ? "open" : "closed"}`)
+            speak(`Valve detected in ${json.data[1] ? "open" : "closed"} state`)
+        }
+        if (json.data[2] !== null) {
+            speak(`Aruco marker with I D ${json.data[2]} detected at position ${Math.round(json.data[3])}, ${Math.round(json.data[4])}`)
+        }
+        if (json.data[5] !== null) {
+            speak(`Pressure guage detected at ${Math.round(json.data[5])} pascals`)
         }
 
         setData({
