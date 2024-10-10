@@ -20,7 +20,7 @@ export default function Logs() {
         const response = await fetch(url)
         const json = await response.json()
         if (json.error) {
-            console.log(json.data)
+            console.error(json.data)
             return
         }
 
