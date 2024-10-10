@@ -1,22 +1,19 @@
 import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader } from "reactstrap";
 import { getServerURL } from "./common";
+import { useSelector } from "react-redux";
 import Speech from "speak-tts";
 
 const speech = new Speech()
 if (speech.hasBrowserSupport()) {
-    console.log("TTS supported")
-    speech.init().then((data) => {
-        console.log("TTS ready: ", data)
-        speech.speak({
-            text: 'Hello',
-            queue: false
-        }).catch(e => {
-            console.error("Error: ", e)
-        })
-    }).catch(e => {
-        console.error("Failed to init TTS: ", e)
+    speech.init().then(data => {
+        console.log("Speech is ready", data)
+    }
+    ).catch(e => {
+        console.error("Failed to initialize speech", e)
     })
+} else {
+    console.error("Speech is not supported")
 }
 
 export default function Imagery() {
@@ -27,7 +24,22 @@ export default function Imagery() {
         arucoPoseY: null,
         pressureGuage: null
     })
+
     const [rate, setRate] = useState(1000)
+    const mute = useSelector(state => state.mute)
+
+    function speak(text) {
+        if (mute) {
+            return
+        }
+
+        speech.speak({
+            text: text,
+            queue: false
+        }).catch(e => {
+            console.error("Failed to speak: ", e)
+        })
+    }
 
     async function getData() {
         const url = getServerURL()
@@ -45,12 +57,7 @@ export default function Imagery() {
             json.data = [null, null, null, null, null, null]
 
         if (json.data[1] !== null) {
-            speech.speak({
-                text: `Valve state is ${json.data[1] ? "open" : "closed"}`,
-                queue: true
-            }).catch(e => {
-                console.error("Error: ", e)
-            })
+            speak(`Valve state is ${json.data[1] ? "open" : "closed"}`)
         }
 
         setData({
@@ -67,7 +74,15 @@ export default function Imagery() {
             getData()
         }, rate)
         return () => clearInterval(interval)
-    }, [])
+    }, [mute])
+
+    useEffect(() => {
+        if (mute) {
+            speech.cancel()
+        } else {
+            speak("Audio enabled")
+        }
+    }, [mute])
 
     return (
         <Card>
