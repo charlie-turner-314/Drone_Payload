@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { Card, CardBody, CardHeader, DropdownItem, DropdownMenu, DropdownToggle, InputGroup, UncontrolledDropdown } from "reactstrap";
 import { Multiselect } from "multiselect-react-dropdown";
 import { Line } from "react-chartjs-2";
+import { useSelector } from "react-redux";
 import { getServerURL } from "./common";
 import "chart.js/auto";
 import "./Graph.css";
 
 export default function Graph() {
     const [data, setData] = useState(undefined)
-    const [rate, setRate] = useState(1000)
+    const rate = useSelector(state => state.rate)
     const [entries, setEntries] = useState(30)
     const [selected, setSelected] = useState([
         { name: 'Temperature', id: 1 },
@@ -122,28 +123,16 @@ export default function Graph() {
                         }}
                     />
                     <div>
-                        <InputGroup>
-                            <UncontrolledDropdown>
-                                <DropdownToggle caret color="primary">Update Rate ({rate})</DropdownToggle>
-                                <DropdownMenu>
-                                    <DropdownItem onClick={() => setRate(250)}>250ms</DropdownItem>
-                                    <DropdownItem onClick={() => setRate(500)}>500ms</DropdownItem>
-                                    <DropdownItem onClick={() => setRate(1000)}>1s</DropdownItem>
-                                    <DropdownItem onClick={() => setRate(2000)}>2s</DropdownItem>
-                                    <DropdownItem onClick={() => setRate(5000)}>5s</DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
-                            <UncontrolledDropdown className="ml-auto">
-                                <DropdownToggle caret color="primary">Entries ({entries})</DropdownToggle>
-                                <DropdownMenu>
-                                    <DropdownItem onClick={() => setEntries(10)}>10</DropdownItem>
-                                    <DropdownItem onClick={() => setEntries(20)}>20</DropdownItem>
-                                    <DropdownItem onClick={() => setEntries(30)}>30</DropdownItem>
-                                    <DropdownItem onClick={() => setEntries(40)}>40</DropdownItem>
-                                    <DropdownItem onClick={() => setEntries(50)}>50</DropdownItem>
-                                </DropdownMenu>
-                            </UncontrolledDropdown>
-                        </InputGroup>
+                        <UncontrolledDropdown className="ml-auto">
+                            <DropdownToggle caret color="primary">Entries ({entries})</DropdownToggle>
+                            <DropdownMenu>
+                                <DropdownItem onClick={() => setEntries(10)}>10</DropdownItem>
+                                <DropdownItem onClick={() => setEntries(20)}>25</DropdownItem>
+                                <DropdownItem onClick={() => setEntries(50)}>50</DropdownItem>
+                                <DropdownItem onClick={() => setEntries(70)}>75</DropdownItem>
+                                <DropdownItem onClick={() => setEntries(100)}>100</DropdownItem>
+                            </DropdownMenu>
+                        </UncontrolledDropdown>
                     </div>
                 </div>
                 <div className="mt-3">

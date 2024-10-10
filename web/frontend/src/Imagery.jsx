@@ -25,7 +25,7 @@ export default function Imagery() {
         pressureGuage: null
     })
 
-    const [rate, setRate] = useState(1000)
+    const rate = useSelector(state => state.rate)
     const mute = useSelector(state => state.mute)
 
     function speak(text) {
@@ -79,7 +79,7 @@ export default function Imagery() {
             getData()
         }, rate)
         return () => clearInterval(interval)
-    }, [mute])
+    }, [mute, rate])
 
     useEffect(() => {
         if (mute) {
