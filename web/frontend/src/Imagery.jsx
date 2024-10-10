@@ -16,6 +16,9 @@ if (speech.hasBrowserSupport()) {
     console.error("Speech is not supported")
 }
 
+const PRESSURE_THRESHOLD = 10
+const RESET_TIMEOUT = 5000
+
 export default function Imagery() {
     const [data, setData] = useState({
         valveState: null,
@@ -24,6 +27,9 @@ export default function Imagery() {
         arucoPoseY: null,
         pressureGuage: null
     })
+    const [lastValveState, setLastValveState] = useState(null)
+    const [lastArucoID, setLastArucoID] = useState(null)
+    const [lastPressureValue, setLastPressureValue] = useState(null)
 
     const rate = useSelector(state => state.rate)
     const mute = useSelector(state => state.mute)
@@ -34,7 +40,7 @@ export default function Imagery() {
         }
         speech.speak({
             text: text,
-            queue: true
+            queue: false
         }).catch(e => {
             console.error("Failed to speak: ", e)
         })
@@ -56,13 +62,26 @@ export default function Imagery() {
             json.data = [null, null, null, null, null, null]
 
         if (json.data[1] !== null) {
-            speak(`Valve detected in ${json.data[1] ? "open" : "closed"} state`)
+            if (lastValveState !== json.data[1]) {
+                setLastValveState(json.data[1])
+                setTimeout(() => setLastValveState(null), RESET_TIMEOUT)
+                speak(`Valve detected in ${json.data[1] ? "open" : "closed"} state`)
+            }
         }
         if (json.data[2] !== null) {
-            speak(`Aruco marker with I D ${json.data[2]} detected at position ${Math.round(json.data[3])}, ${Math.round(json.data[4])}`)
+            if (lastArucoID !== json.data[2]) {
+                setLastArucoID(json.data[2])
+                setTimeout(() => setLastArucoID(null), RESET_TIMEOUT)
+                speak(`Aruco marker with I D ${json.data[2]} detected at position ${Math.round(json.data[3])}, ${Math.round(json.data[4])}`)
+            }
         }
         if (json.data[5] !== null) {
-            speak(`Pressure guage detected at ${Math.round(json.data[5])} pascals`)
+            let nearest = Math.round(json.data[5] / PRESSURE_THRESHOLD) * PRESSURE_THRESHOLD
+            if (lastPressureValue !== nearest) {
+                setLastPressureValue(nearest)
+                setTimeout(() => setLastPressureValue(null), RESET_TIMEOUT)
+                speak(`Pressure guage detected at ${Math.round(json.data[5])} pascals`)
+            }
         }
 
         setData({
